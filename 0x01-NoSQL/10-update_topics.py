@@ -13,5 +13,5 @@ def update_topics(mongo_collection, name, topics):
          list of trings
     """
     filter = {"name": name}
-    topic = {"$set": {"topics": topics}}
-    mongo_collection.update_one(filter, topic)
+    update = {"$set": {"topics": topics}}
+    mongo_collection.update_one(filter, update)
