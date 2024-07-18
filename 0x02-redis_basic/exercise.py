@@ -2,7 +2,7 @@
 """ """
 import uuid
 import redis
-from typing import Callable, Optional, Any, Union, Dict
+from typing import Callable, Optional, Any, Union, Dict, List
 from functools import wraps
 
 
@@ -17,6 +17,36 @@ def count_calls(method: Callable) -> Callable:
     return wrapper
 
 
+def call_history(method: Callable) -> Callable:
+    """
+    Decorator to track method call history using Redis.
+
+    Args:
+        method (Callable): Method to decorate.
+
+    Returns:
+        Callable: Decorated method with history tracking.
+    """
+    @wraps(method)
+    def wrapper(self, *args, **kwargs):
+        key = method.__qualname__
+
+        # Store inputs
+        inputs_key = f"{key}:inputs"
+        self._redis.rpush(inputs_key, str(args))
+
+        # Call the original method
+        result = method(self, *args, **kwargs)
+
+        # Store output
+        outputs_key = f"{key}:outputs"
+        self._redis.rpush(outputs_key, str(result))
+
+        return result
+
+    return wrapper
+
+
 class Cache:
     """class"""
     def __init__(self):
@@ -28,6 +58,7 @@ class Cache:
         self._redis.flushdb()
 
     @count_calls
+    @call_history
     def store(self, data: Union[str, bytes, int, float]) -> str:
         """
         takes a data argument and returns a string
@@ -42,6 +73,7 @@ class Cache:
             return key
 
     @count_calls
+    @call_history
     def get(self, key: str, fn: Optional[Callable[[bytes], Any]] = None) -> Any:
         """
         Retrieve data from Redis
