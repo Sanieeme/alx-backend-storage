@@ -2,7 +2,19 @@
 """ """
 import uuid
 import redis
-from typing import Callable, Optional, Any, Union
+from typing import Callable, Optional, Any, Union, Dict
+from functools import wraps
+
+
+def count_calls(method: Callable) -> Callable:
+    """ """
+    @wraps(method)
+    def wrapper(self, *args, **kwds):
+        """Wrapper function to count method calls."""
+        key = method.__qualname__
+        self._redis.incr(key)
+        return method(self, *args, **kwds)
+    return wrapper
 
 
 class Cache:
@@ -15,6 +27,7 @@ class Cache:
         self._redis = redis.Redis()
         self._redis.flushdb()
 
+    @count_calls
     def store(self, data: Union[str, bytes, int, float]) -> str:
         """
         takes a data argument and returns a string
@@ -28,6 +41,7 @@ class Cache:
             self._redis.set(key, data)
             return key
 
+    @count_calls
     def get(self, key: str, fn: Optional[Callable[[bytes], Any]] = None) -> Any:
         """
         Retrieve data from Redis
@@ -68,3 +82,15 @@ class Cache:
             int: The retrieved data as an int
         """
         return self.get(key, lambda x: int(x.decode('utf-8')))
+
+    def get_call_count(self, method_name: str) -> int:
+        """
+        Get the call count for a specific method.
+
+        Args:
+            method_name: The qualified name of the method
+
+        Returns:
+            in.
+        """
+        return int(self._redis.get(method_name) or 0)
