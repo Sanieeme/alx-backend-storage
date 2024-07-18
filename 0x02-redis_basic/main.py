@@ -53,3 +53,10 @@ outputs = cache._redis.lrange("{}:outputs".format(cache.store.__qualname__), 0, 
 
 print("inputs: {}".format(inputs))
 print("outputs: {}".format(outputs))
+
+cache = Cache()
+cache.store("foo")
+cache.store("bar")
+cache.store(42)
+replay(cache, cache.store)
+

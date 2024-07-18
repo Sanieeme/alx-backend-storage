@@ -57,6 +57,32 @@ class Cache:
         self._redis = redis.Redis()
         self._redis.flushdb()
 
+    @staticmethod
+    def replay(method: Callable) -> None:
+        """
+        Replay the method calls recorded in Redis.
+
+        Args:
+            method (Callable): The method to replay the calls for.
+        """
+        cache_instance = method.__self__  # Get the instance of the cache
+        key = method.__qualname__
+        inputs_key = f"{key}:inputs"
+        outputs_key = f"{key}:outputs"
+
+        # Fetch inputs and outputs from Redis
+        inputs = cache_instance._redis.lrange(inputs_key, 0, -1)
+        outputs = cache_instance._redis.lrange(outputs_key, 0, -1)
+
+        # Format and print the replay output
+        num_calls = len(inputs)
+        print(f"{key} was called {num_calls} times:")
+
+        for input_data, output_data in zip(inputs, outputs):
+            input_str = input_data.decode('utf-8')
+            output_str = output_data.decode('utf-8')
+            print(f"{key}(*{input_str}) -> {output_str}")
+
     @count_calls
     @call_history
     def store(self, data: Union[str, bytes, int, float]) -> str:
